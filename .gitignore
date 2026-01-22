@@ -1,0 +1,28 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.next/
+out/
+build/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env
+*.pdf
+backend/generated_pdfs/
+backend/quotes_counter.json
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+*.fix
+*.backup

@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+selenium
+webdriver-manager
+pydantic
+reportlab
+python-multipart
+pytest
