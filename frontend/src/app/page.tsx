@@ -65,8 +65,8 @@ export default function Home() {
   const [showManualProduct, setShowManualProduct] = useState(false);
   const [manualProduct, setManualProduct] = useState({ name: '', price: 0 });
 
-  // Fix for Turbopack dev server - use localhost in dev, proxy in production
-  const API_URL = process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '';
+  // Use env var if set (for ngrok), otherwise localhost for dev
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   useEffect(() => {
     fetch(`${API_URL}/api/next-quote-number`)
