@@ -112,7 +112,7 @@ try {
     $WshShell = New-Object -ComObject WScript.Shell
     $Shortcut = $WshShell.CreateShortcut($shortcutPath)
     $Shortcut.TargetPath = "powershell.exe"
-    $Shortcut.Arguments = "-ExecutionPolicy Bypass -File `"$targetPath`""
+    $Shortcut.Arguments = "-ExecutionPolicy Bypass -File \`"$targetPath\`""
     $Shortcut.WorkingDirectory = $PSScriptRoot
     $Shortcut.IconLocation = "shell32.dll,165"
     $Shortcut.Description = "Iniciar Cotizador Warp6"
