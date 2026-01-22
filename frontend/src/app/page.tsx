@@ -65,9 +65,6 @@ export default function Home() {
   const [showManualProduct, setShowManualProduct] = useState(false);
   const [manualProduct, setManualProduct] = useState({ name: '', price: 0 });
 
-  // Use relative path for proxy (configured in next.config.ts)
-  const API_URL = '';
-
   useEffect(() => {
     fetch('/api/next-quote-number')
       .then(res => res.json())
