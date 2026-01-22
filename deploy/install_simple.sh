@@ -13,7 +13,9 @@ echo "[1/6] Actualizando sistema..."
 sudo apt update
 
 # Instalar Python
-echo "[2/6] Instalando Python..."
+echo "[2/6] Instalando Python y repositorios..."
+sudo add-apt-repository universe -y
+sudo apt update
 sudo apt install -y python3 python3-pip python3-venv
 
 # Instalar Node.js
@@ -22,11 +24,19 @@ curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt install -y nodejs
 
 # Instalar Chrome y ChromeDriver
-echo "[4/6] Instalando Chrome y ChromeDriver..."
-wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-sudo apt install -y ./google-chrome-stable_current_amd64.deb
-rm google-chrome-stable_current_amd64.deb
-sudo apt install -y chromium-chromedriver
+echo "[4/6] Instalando Chrome/Chromium..."
+# Intentar instalar librerías base primero
+sudo apt install -y libasound2 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 libc6 libcairo2 libcups2 libdbus-1-3 libexpat1 libgbm1 libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 libudev1 libvulkan1 libx11-6 libxcb1 libxcomposite1 libxdamage1 libxext6 libxfixes3 libxkbcommon0 libxrandr2 || true
+
+if [ "$(uname -m)" == "x86_64" ]; then
+    echo "Arquitectura x86_64 detectada. Intentando Google Chrome..."
+    wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+    sudo apt install -y ./google-chrome-stable_current_amd64.deb || sudo apt --fix-broken install -y
+    rm -f google-chrome-stable_current_amd64.deb
+else
+    echo "Arquitectura no x86_64 o fallo en Chrome. Instalando Chromium..."
+    sudo apt install -y chromium-browser
+fi
 
 # Clonar proyecto
 echo "[5/6] Descargando aplicación..."
