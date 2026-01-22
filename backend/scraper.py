@@ -24,7 +24,26 @@ class DigicorpScraper:
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         
-        service = Service(ChromeDriverManager().install())
+        
+        import platform
+        import os
+        
+        system = platform.system()
+        service = None
+        
+        if system == 'Linux':
+            # Linux (Server/ARM): Use system installed chromium-driver
+            # This avoids "Exec format error" on ARM servers (Oracle Cloud)
+            chromedriver_path = "/usr/bin/chromedriver"
+            if os.path.exists(chromedriver_path):
+                print(f"Using system chromedriver at {chromedriver_path}")
+                service = Service(chromedriver_path)
+        
+        if service is None:
+            # Windows or Fallback: Use webdriver_manager
+            print("Using webdriver_manager to install driver...")
+            service = Service(ChromeDriverManager().install())
+
         self.driver = webdriver.Chrome(service=service, options=chrome_options)
         print("Browser session started")
 
