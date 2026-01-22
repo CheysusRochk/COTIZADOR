@@ -19,8 +19,8 @@ sudo apt update
 sudo apt install -y python3 python3-pip python3-venv
 
 # Instalar Node.js
-echo "[3/6] Instalando Node.js..."
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+echo "[3/6] Instalando Node.js 20 (LTS)..."
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs
 
 # Instalar Chrome y ChromeDriver
