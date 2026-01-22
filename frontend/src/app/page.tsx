@@ -65,12 +65,14 @@ export default function Home() {
   const [showManualProduct, setShowManualProduct] = useState(false);
   const [manualProduct, setManualProduct] = useState({ name: '', price: 0 });
 
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
   useEffect(() => {
-    fetch('http://localhost:8000/api/next-quote-number')
+    fetch(`${API_URL}/api/next-quote-number`)
       .then(res => res.json())
       .then(data => setQuoteNumber(data.quote_number))
       .catch(() => setQuoteNumber('0000'));
-  }, []);
+  }, [API_URL]);
 
   const searchProducts = async () => {
     if (!query) return;
@@ -78,7 +80,7 @@ export default function Home() {
     // Clean query to avoid confusion
     setResults([]);
     try {
-      const res = await fetch(`http://localhost:8000/api/search?query=${encodeURIComponent(query)}`);
+      const res = await fetch(`${API_URL}/api/search?query=${encodeURIComponent(query)}`);
       const data = await res.json();
       setResults(data.results || []);
     } catch (error) {
@@ -158,7 +160,7 @@ export default function Home() {
         quote_number: quoteNumber
       };
 
-      const res = await fetch('http://localhost:8000/api/generate-pdf', {
+      const res = await fetch(`${API_URL}/api/generate-pdf`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
