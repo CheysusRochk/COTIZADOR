@@ -9,24 +9,44 @@ from webdriver_manager.chrome import ChromeDriverManager
 from typing import List, Dict, Optional
 import time
 
+import os
+import pathlib
+
 class DigicorpScraper:
     def __init__(self):
         self.driver = None
         self.base_url = "https://www.digicorp.com.bo"
         self.username = None
         self.password = None
+        # Data directory for session persistence
+        self.user_data_dir = os.path.join(os.getcwd(), "chrome_data")
+        if not os.path.exists(self.user_data_dir):
+            os.makedirs(self.user_data_dir)
 
     def start_session(self, headless=False):
-        """Iniciar el navegador Chrome"""
+        """Iniciar el navegador Chrome con persistencia de sesión"""
         chrome_options = Options()
         if headless:
             chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         
+        # Persistence: Use a user data directory
+        chrome_options.add_argument(f"--user-data-dir={self.user_data_dir}")
+        chrome_options.add_argument("--profile-directory=Default")
+        
+        # Basic anti-detection
+        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        chrome_options.add_experimental_option("useAutomationExtension", False)
+
         service = Service(ChromeDriverManager().install())
         self.driver = webdriver.Chrome(service=service, options=chrome_options)
-        print("Browser session started")
+        
+        # More anti-detection
+        self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        
+        print(f"Browser session started (Persistent: {self.user_data_dir})")
 
     def login(self, username, password):
         """Login a Digicorp"""

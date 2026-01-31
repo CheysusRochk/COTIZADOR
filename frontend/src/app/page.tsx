@@ -138,6 +138,12 @@ export default function Home() {
     setCart(newCart);
   };
 
+  const updateName = (index: number, newName: string) => {
+    const newCart = [...cart];
+    newCart[index].name = newName;
+    setCart(newCart);
+  };
+
   const generatePDF = async () => {
     if (!client.nombre || cart.length === 0) {
       alert("Ingrese datos del cliente y productos");
@@ -381,7 +387,12 @@ export default function Home() {
                   <div key={idx} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col gap-3">
                     <div className="flex gap-3 justify-between items-start">
                       <div className="flex-1">
-                        <h4 className="font-bold text-slate-800 text-sm leading-tight">{item.name}</h4>
+                        <input
+                          type="text"
+                          value={item.name}
+                          onChange={(e) => updateName(idx, e.target.value)}
+                          className="w-full font-bold text-slate-800 text-sm leading-tight bg-transparent border-none focus:ring-1 focus:ring-blue-500 rounded px-1 -ml-1 transition-all"
+                        />
                         <div className="flex items-center gap-2 text-xs mt-1">
                           <span className="text-slate-500">Costo: {item.price.toFixed(2)}</span>
                           <span className="text-slate-300">|</span>
