@@ -81,7 +81,7 @@ export default function Home() {
       setIsAuthenticated(true);
     }
 
-    fetch('http://localhost:8000/api/config')
+    fetch('/api/config')
       .then(res => res.json())
       .then(data => {
         setConfig(data);
@@ -92,7 +92,7 @@ export default function Home() {
         setAuthChecked(true);
       });
 
-    fetch('http://localhost:8000/api/next-quote-number')
+    fetch('/api/next-quote-number')
       .then(res => res.json())
       .then(data => setQuoteNumber(data.quote_number))
       .catch(() => setQuoteNumber('0000'));
@@ -104,7 +104,7 @@ export default function Home() {
     // Clean query to avoid confusion
     setResults([]);
     try {
-      const res = await fetch(`http://localhost:8000/api/search?query=${encodeURIComponent(query)}`);
+      const res = await fetch(`/api/search?query=${encodeURIComponent(query)}`);
       const data = await res.json();
       setResults(data.results || []);
     } catch (error) {
@@ -190,7 +190,7 @@ export default function Home() {
         quote_number: quoteNumber
       };
 
-      const res = await fetch('http://localhost:8000/api/generate-pdf', {
+      const res = await fetch('/api/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -225,7 +225,7 @@ export default function Home() {
     e.preventDefault();
     setLoginError('');
     try {
-      const res = await fetch('http://localhost:8000/api/auth', {
+      const res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: loginPassword })
