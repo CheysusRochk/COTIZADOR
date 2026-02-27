@@ -484,11 +484,11 @@ export default function Home() {
                   <div key={idx} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col gap-3">
                     <div className="flex gap-3 justify-between items-start">
                       <div className="flex-1">
-                        <input
-                          type="text"
+                        <textarea
                           value={item.name}
                           onChange={(e) => updateName(idx, e.target.value)}
-                          className="w-full font-bold text-slate-800 text-sm leading-tight bg-transparent border-none focus:ring-1 focus:ring-blue-500 rounded px-1 -ml-1 transition-all"
+                          className="w-full font-bold text-slate-800 text-sm leading-tight bg-transparent border-none focus:ring-1 focus:ring-blue-500 rounded px-1 -ml-1 transition-all resize-y min-h-[40px]"
+                          rows={item.name.split('\n').length || 1}
                         />
                         <div className="flex items-center gap-2 text-xs mt-1">
                           <span className="text-slate-500">Costo: {item.price.toFixed(2)}</span>
@@ -539,7 +539,7 @@ export default function Home() {
                 <div className="border-2 border-blue-500 rounded-xl p-4 bg-blue-50 shadow-md">
                   {/* Manual Form inputs */}
                   <div className="space-y-3">
-                    <input type="text" placeholder="Nombre del Producto" value={manualProduct.name} onChange={e => setManualProduct({ ...manualProduct, name: e.target.value })} className="w-full px-3 py-2 border rounded-lg font-bold" />
+                    <textarea placeholder="Nombre o Descripción del Producto (Puedes presionar ENTER para múltiples líneas)" value={manualProduct.name} onChange={e => setManualProduct({ ...manualProduct, name: e.target.value })} className="w-full px-3 py-2 border rounded-lg font-bold resize-y min-h-[80px]" />
                     <div className="flex gap-2">
                       <input type="number" placeholder="Precio Bs" value={manualProduct.price || ''} onChange={e => setManualProduct({ ...manualProduct, price: parseFloat(e.target.value) })} className="w-full px-3 py-2 border rounded-lg font-bold" />
                       <button onClick={addManualProduct} className="bg-blue-600 text-white px-4 rounded-lg font-medium">Agregar</button>

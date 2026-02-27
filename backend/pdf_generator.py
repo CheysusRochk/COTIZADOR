@@ -186,9 +186,11 @@ class PDFGenerator:
             subtotal = sale_price * qty
             total += subtotal
             
+            name_text = item.get('name', '').replace('\n', '<br/>')
+            
             prod_data.append([
                 str(idx),
-                Paragraph(item.get('name', ''), self.styles['CellText']),
+                Paragraph(name_text, self.styles['CellText']),
                 str(qty),
                 f"{sale_price:.2f}",
                 f"{subtotal:.2f}"
