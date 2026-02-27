@@ -4,6 +4,10 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import os
+from dotenv import load_dotenv
+
+load_dotenv()  # Load variables from .env if present
+
 import asyncio
 from scraper import DigicorpScraper
 from pdf_generator import PDFGenerator
@@ -25,11 +29,19 @@ scraper = DigicorpScraper()
 pdf_gen = PDFGenerator()
 quote_mgr = QuoteNumberManager()
 
+# Environment flags
+ENV_MODE = os.getenv("ENV_MODE", "local")
+REQUIRE_LOGIN = os.getenv("REQUIRE_LOGIN", "false").lower() == "true"
+ENABLE_SCRAPER = os.getenv("ENABLE_SCRAPER", "true").lower() == "true"
+
 # Credentials provided by user
 USER_EMAIL = "warp6Sol@gmail.com"
 USER_PASS = "W4rp6s0l!"
 
 # Models
+class AppLoginRequest(BaseModel):
+    password: str
+
 class LoginRequest(BaseModel):
     username: str
     password: str
@@ -69,14 +81,32 @@ class QuoteRequest(BaseModel):
 def read_root():
     return {"message": "Warp6 Cotizador API is running"}
 
+@app.get("/api/config")
+def get_config():
+    return {
+        "env_mode": ENV_MODE,
+        "require_login": REQUIRE_LOGIN,
+        "enable_scraper": ENABLE_SCRAPER
+    }
+
 @app.on_event("startup")
 def startup_event():
-    # Attempt auto-login on startup
-    print("Attempting auto-login...")
-    try:
-        scraper.login(USER_EMAIL, USER_PASS)
-    except Exception as e:
-        print(f"Auto-login failed: {e}")
+    if ENABLE_SCRAPER:
+        # Attempt auto-login on startup
+        print("Attempting auto-login to Digicorp...")
+        try:
+            scraper.login(USER_EMAIL, USER_PASS)
+        except Exception as e:
+            print(f"Auto-login failed: {e}")
+    else:
+        print("Scraper disabled in configuration.")
+
+@app.post("/api/auth")
+def authenticate_app(req: AppLoginRequest):
+    ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
+    if not ADMIN_PASSWORD or req.password == ADMIN_PASSWORD:
+        return {"status": "success", "token": "authorized"}
+    raise HTTPException(status_code=401, detail="Invalid password")
 
 @app.post("/api/login")
 def login(creds: LoginRequest):
@@ -88,6 +118,9 @@ def login(creds: LoginRequest):
 
 @app.get("/api/search")
 def search_products(query: str):
+    if not ENABLE_SCRAPER:
+        raise HTTPException(status_code=403, detail="Search is disabled in this environment")
+        
     try:
         results = scraper.search_products(query)
         return {"results": results}

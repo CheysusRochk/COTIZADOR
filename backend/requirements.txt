@@ -6,3 +6,4 @@ pydantic
 reportlab
 python-multipart
 pytest
+python-dotenv

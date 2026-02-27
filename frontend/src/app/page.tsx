@@ -65,7 +65,33 @@ export default function Home() {
   const [showManualProduct, setShowManualProduct] = useState(false);
   const [manualProduct, setManualProduct] = useState({ name: '', price: 0 });
 
+  const [config, setConfig] = useState({
+    env_mode: 'local',
+    require_login: false,
+    enable_scraper: true
+  });
+
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [authChecked, setAuthChecked] = useState(false);
+
   useEffect(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('auth_token')) {
+      setIsAuthenticated(true);
+    }
+
+    fetch('http://localhost:8000/api/config')
+      .then(res => res.json())
+      .then(data => {
+        setConfig(data);
+        setAuthChecked(true);
+      })
+      .catch(err => {
+        console.error("Error loading config", err);
+        setAuthChecked(true);
+      });
+
     fetch('http://localhost:8000/api/next-quote-number')
       .then(res => res.json())
       .then(data => setQuoteNumber(data.quote_number))
@@ -195,6 +221,68 @@ export default function Home() {
   }, 0);
   const totalProfit = totalSales - totalCost;
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    try {
+      const res = await fetch('http://localhost:8000/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: loginPassword })
+      });
+      if (res.ok) {
+        localStorage.setItem('auth_token', 'authorized');
+        setIsAuthenticated(true);
+      } else {
+        setLoginError('Contraseña incorrecta');
+      }
+    } catch (err) {
+      setLoginError('Error de conexión con el servidor');
+    }
+  };
+
+  if (!authChecked) {
+    return <div className="min-h-screen bg-slate-100 flex justify-center items-center"><Loader2 className="w-10 h-10 animate-spin text-blue-600" /></div>;
+  }
+
+  if (config.require_login && !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
+        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-extrabold text-blue-900 mb-2">Warp6 Cotizador</h1>
+            <p className="text-slate-500 font-medium">Acceso Restringido</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2">Contraseña de Acceso</label>
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-medium text-slate-900"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+
+            {loginError && (
+              <p className="text-sm font-bold text-red-500 bg-red-50 p-3 rounded-lg border border-red-100">{loginError}</p>
+            )}
+
+            <button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md hover:shadow-lg"
+            >
+              Ingresar al Sistema
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-slate-100 p-6 font-sans text-slate-900">
       <header className="mb-6 flex items-center justify-between bg-white p-4 rounded-xl shadow-sm">
@@ -211,28 +299,37 @@ export default function Home() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Panel: Search (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-800">
-              <Search className="w-5 h-5 text-blue-600" /> Búsqueda de Productos
-            </h2>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && searchProducts()}
-                className="flex-1 px-4 py-3 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-medium placeholder-slate-400 text-slate-900"
-                placeholder="Escribe para buscar..."
-              />
-              <button
-                onClick={searchProducts}
-                disabled={loading}
-                className="bg-blue-600 text-white px-6 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-md hover:shadow-lg"
-              >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Buscar'}
-              </button>
+          {config.enable_scraper ? (
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+              <h2 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-800">
+                <Search className="w-5 h-5 text-blue-600" /> Búsqueda de Productos
+              </h2>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && searchProducts()}
+                  className="flex-1 px-4 py-3 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-medium placeholder-slate-400 text-slate-900"
+                  placeholder="Escribe para buscar..."
+                />
+                <button
+                  onClick={searchProducts}
+                  disabled={loading}
+                  className="bg-blue-600 text-white px-6 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-md hover:shadow-lg"
+                >
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Buscar'}
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-amber-50 p-5 rounded-xl shadow-sm border border-amber-200">
+              <h2 className="text-lg font-bold mb-2 flex items-center gap-2 text-amber-900">
+                <Search className="w-5 h-5" /> Búsqueda de Productos
+              </h2>
+              <p className="text-sm text-amber-700">La búsqueda automática está desactivada en la versión Cloud. Por favor, usa la opción de "Agregar Producto Manual".</p>
+            </div>
+          )}
 
           <div className="space-y-3 max-h-[75vh] overflow-y-auto pr-2">
             {results.map((product, idx) => (
