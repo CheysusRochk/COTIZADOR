@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, FileText, Loader2, ChevronDown, ChevronUp, PlusCircle, Settings } from 'lucide-react';
+import { Search, Plus, Trash2, FileText, Loader2, ChevronDown, ChevronUp, PlusCircle, Settings, Save, Users } from 'lucide-react';
 
 // Types
 interface Product {
@@ -34,6 +34,60 @@ interface TermsData {
   precioLiteral: string; // "DOSCIENTOS BOLIVIANOS..."
 }
 
+// Utility: Convert a number to Spanish literal text for Bolivian currency
+function numberToSpanish(amount: number): string {
+  const units = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
+  const teens = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISEIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
+  const tens = ['', 'DIEZ', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
+  const hundreds = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
+
+  if (amount === 0) return 'CERO 00/100 BOLIVIANOS';
+
+  const intPart = Math.floor(amount);
+  const decPart = Math.round((amount - intPart) * 100);
+
+  function convertGroup(n: number): string {
+    if (n === 0) return '';
+    if (n === 100) return 'CIEN';
+    if (n < 10) return units[n];
+    if (n < 20) return teens[n - 10];
+    if (n < 30) {
+      if (n === 20) return 'VEINTE';
+      return 'VEINTI' + units[n - 20];
+    }
+    if (n < 100) {
+      const t = Math.floor(n / 10);
+      const u = n % 10;
+      return tens[t] + (u > 0 ? ' Y ' + units[u] : '');
+    }
+    const h = Math.floor(n / 100);
+    const rest = n % 100;
+    return hundreds[h] + (rest > 0 ? ' ' + convertGroup(rest) : '');
+  }
+
+  function convertNumber(n: number): string {
+    if (n === 0) return '';
+    if (n < 1000) return convertGroup(n);
+    if (n < 2000) return 'MIL ' + convertGroup(n - 1000);
+    if (n < 1000000) {
+      const thousands = Math.floor(n / 1000);
+      const rest = n % 1000;
+      return convertGroup(thousands) + ' MIL' + (rest > 0 ? ' ' + convertGroup(rest) : '');
+    }
+    if (n < 2000000) {
+      const rest = n % 1000000;
+      return 'UN MILLON' + (rest > 0 ? ' ' + convertNumber(rest) : '');
+    }
+    const millions = Math.floor(n / 1000000);
+    const rest = n % 1000000;
+    return convertGroup(millions) + ' MILLONES' + (rest > 0 ? ' ' + convertNumber(rest) : '');
+  }
+
+  const literal = convertNumber(intPart).trim();
+  const decStr = decPart.toString().padStart(2, '0');
+  return `${literal} ${decStr}/100 BOLIVIANOS`;
+}
+
 export default function Home() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Product[]>([]);
@@ -64,6 +118,7 @@ export default function Home() {
   const [quoteNumber, setQuoteNumber] = useState('Cargando...');
   const [showManualProduct, setShowManualProduct] = useState(false);
   const [manualProduct, setManualProduct] = useState({ name: '', price: 0 });
+  const [savedClients, setSavedClients] = useState<ClientData[]>([]);
 
   const [config, setConfig] = useState({
     env_mode: 'local',
@@ -96,6 +151,12 @@ export default function Home() {
       .then(res => res.json())
       .then(data => setQuoteNumber(data.quote_number))
       .catch(() => setQuoteNumber('0000'));
+
+    // Load saved clients
+    fetch('/api/clients')
+      .then(res => res.json())
+      .then(data => setSavedClients(data))
+      .catch(() => { });
   }, []);
 
   const searchProducts = async () => {
@@ -220,6 +281,15 @@ export default function Home() {
     return acc + (salePrice * item.quantity);
   }, 0);
   const totalProfit = totalSales - totalCost;
+
+  // Auto-fill literal price whenever totalSales changes
+  useEffect(() => {
+    if (totalSales > 0) {
+      setTerms(prev => ({ ...prev, precioLiteral: numberToSpanish(totalSales) }));
+    } else {
+      setTerms(prev => ({ ...prev, precioLiteral: '' }));
+    }
+  }, [totalSales]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -379,64 +449,105 @@ export default function Home() {
               </button>
 
               {showClientForm && (
-                <div className="p-5 grid grid-cols-2 gap-4 bg-white">
-                  <div className="col-span-2">
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre / Razón Social *</label>
-                    <input
-                      type="text"
-                      value={client.nombre}
-                      onChange={(e) => setClient({ ...client, nombre: e.target.value.toUpperCase() })}
-                      className="w-full px-3 py-2 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-slate-800 placeholder-slate-300 transition-all"
-                      placeholder="NOMBRE DEL CLIENTE"
-                    />
+                <div className="p-5 bg-white">
+                  {/* Client selector + save */}
+                  <div className="flex gap-2 mb-4">
+                    <div className="flex-1">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1"><Users className="w-3 h-3 inline" /> Cliente Guardado</label>
+                      <select
+                        className="w-full px-3 py-2 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 outline-none font-medium text-slate-800 bg-white"
+                        value=""
+                        onChange={(e) => {
+                          const selected = savedClients[parseInt(e.target.value)];
+                          if (selected) setClient(selected);
+                        }}
+                      >
+                        <option value="">-- Seleccionar cliente guardado --</option>
+                        {savedClients.map((c, idx) => (
+                          <option key={idx} value={idx}>{c.nombre} {c.telefono ? `(${c.telefono})` : ''}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (!client.nombre) { alert('Ingrese un nombre primero'); return; }
+                        try {
+                          await fetch('/api/clients', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(client)
+                          });
+                          const res = await fetch('/api/clients');
+                          const data = await res.json();
+                          setSavedClients(data);
+                          alert(`Cliente "${client.nombre}" guardado correctamente`);
+                        } catch { alert('Error al guardar'); }
+                      }}
+                      className="mt-5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-sm flex items-center gap-1 transition-colors shadow-sm"
+                    >
+                      <Save className="w-4 h-4" /> Guardar
+                    </button>
                   </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Dirección</label>
-                    <input
-                      type="text"
-                      value={client.direccion}
-                      onChange={(e) => setClient({ ...client, direccion: e.target.value.toUpperCase() })}
-                      className="w-full px-3 py-2 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 outline-none font-medium text-slate-800"
-                      placeholder="DIRECCIÓN"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Ciudad</label>
-                    <input
-                      type="text"
-                      value={client.ciudad}
-                      onChange={(e) => setClient({ ...client, ciudad: e.target.value.toUpperCase() })}
-                      className="w-full px-3 py-2 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 outline-none font-medium text-slate-800"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Teléfono</label>
-                    <input
-                      type="text"
-                      value={client.telefono}
-                      onChange={(e) => setClient({ ...client, telefono: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 outline-none font-medium text-slate-800"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Correo Electrónico</label>
-                    <input
-                      type="email"
-                      value={client.correo}
-                      onChange={(e) => setClient({ ...client, correo: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 outline-none font-medium text-slate-800"
-                      placeholder="CORREO@EJEMPLO.COM"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Referencia</label>
-                    <input
-                      type="text"
-                      value={client.referencia}
-                      onChange={(e) => setClient({ ...client, referencia: e.target.value.toUpperCase() })}
-                      className="w-full px-3 py-2 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 outline-none font-medium text-slate-800"
-                      placeholder="CONTACTO / REF"
-                    />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre / Razón Social *</label>
+                      <input
+                        type="text"
+                        value={client.nombre}
+                        onChange={(e) => setClient({ ...client, nombre: e.target.value.toUpperCase() })}
+                        className="w-full px-3 py-2 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold text-slate-800 placeholder-slate-300 transition-all"
+                        placeholder="NOMBRE DEL CLIENTE"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Dirección</label>
+                      <input
+                        type="text"
+                        value={client.direccion}
+                        onChange={(e) => setClient({ ...client, direccion: e.target.value.toUpperCase() })}
+                        className="w-full px-3 py-2 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 outline-none font-medium text-slate-800"
+                        placeholder="DIRECCIÓN"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Ciudad</label>
+                      <input
+                        type="text"
+                        value={client.ciudad}
+                        onChange={(e) => setClient({ ...client, ciudad: e.target.value.toUpperCase() })}
+                        className="w-full px-3 py-2 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 outline-none font-medium text-slate-800"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Teléfono</label>
+                      <input
+                        type="text"
+                        value={client.telefono}
+                        onChange={(e) => setClient({ ...client, telefono: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 outline-none font-medium text-slate-800"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Correo Electrónico</label>
+                      <input
+                        type="email"
+                        value={client.correo}
+                        onChange={(e) => setClient({ ...client, correo: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 outline-none font-medium text-slate-800"
+                        placeholder="CORREO@EJEMPLO.COM"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Referencia</label>
+                      <input
+                        type="text"
+                        value={client.referencia}
+                        onChange={(e) => setClient({ ...client, referencia: e.target.value.toUpperCase() })}
+                        className="w-full px-3 py-2 text-sm border-2 border-slate-200 rounded-lg focus:border-blue-500 outline-none font-medium text-slate-800"
+                        placeholder="CONTACTO / REF"
+                      />
+                    </div>
                   </div>
                 </div>
               )}

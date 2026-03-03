@@ -4,6 +4,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import os
+import json
 from dotenv import load_dotenv
 
 load_dotenv()  # Load variables from .env if present
@@ -12,6 +13,9 @@ import asyncio
 from scraper import DigicorpScraper
 from pdf_generator import PDFGenerator
 from quote_manager import QuoteNumberManager
+
+# Path for stored clients
+CLIENTS_FILE = os.path.join(os.path.dirname(__file__), "saved_clients.json")
 
 app = FastAPI(title="Warp6 Cotizador API")
 
@@ -167,6 +171,37 @@ def generate_pdf(quote: QuoteRequest):
     except Exception as e:
         print(e)
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/clients")
+def get_clients():
+    """Return saved clients list"""
+    if os.path.exists(CLIENTS_FILE):
+        with open(CLIENTS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+@app.post("/api/clients")
+def save_client(client: ClientData):
+    """Save a client to the JSON file"""
+    clients = []
+    if os.path.exists(CLIENTS_FILE):
+        with open(CLIENTS_FILE, "r", encoding="utf-8") as f:
+            clients = json.load(f)
+    
+    # Check if client with same name already exists, update if so
+    found = False
+    for i, c in enumerate(clients):
+        if c.get("nombre", "").strip().upper() == client.nombre.strip().upper():
+            clients[i] = client.dict()
+            found = True
+            break
+    if not found:
+        clients.append(client.dict())
+    
+    with open(CLIENTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(clients, f, ensure_ascii=False, indent=2)
+    
+    return {"status": "success", "total_clients": len(clients)}
 
 @app.on_event("shutdown")
 def shutdown_event():
