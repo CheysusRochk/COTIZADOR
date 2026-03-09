@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, FileText, Loader2, ChevronDown, ChevronUp, PlusCircle, Settings, Save, Users } from 'lucide-react';
+import Link from 'next/link';
+import { Search, Plus, Trash2, FileText, Loader2, ChevronDown, ChevronUp, PlusCircle, Settings, Save, Users, Calculator } from 'lucide-react';
 
 // Types
 interface Product {
@@ -360,9 +361,18 @@ export default function Home() {
           <h1 className="text-3xl font-extrabold text-blue-900">Warp6 Cotizador</h1>
           <p className="text-slate-600 font-medium">Sistema Profesional de Cotizaciones</p>
         </div>
-        <div className="text-right">
-          <p className="text-sm font-bold text-slate-500 uppercase">Cotización N°</p>
-          <p className="text-3xl font-black text-blue-600 tracking-tight">{quoteNumber}</p>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/calculadora"
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-all"
+          >
+            <Calculator className="w-4 h-4" />
+            <span className="hidden sm:inline">Calculadora Tributaria</span>
+          </Link>
+          <div className="text-right">
+            <p className="text-sm font-bold text-slate-500 uppercase">Cotización N°</p>
+            <p className="text-3xl font-black text-blue-600 tracking-tight">{quoteNumber}</p>
+          </div>
         </div>
       </header>
 
