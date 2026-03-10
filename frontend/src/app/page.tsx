@@ -17,6 +17,7 @@ interface QuoteItem extends Product {
   quantity: number;
   price: number; // Base price
   individualMargin: number;
+  conFactura: boolean; // Whether this product has an invoice
 }
 
 interface ClientData {
@@ -95,30 +96,35 @@ function fmt(n: number): string {
 }
 
 interface TaxPanelProps {
-  totalCost: number;
+  costoFacturadoCarrito: number;
+  costoSinFacturaCarrito: number;
   totalSales: number;
   taxMode: 'creator' | 'auditor';
   setTaxMode: (m: 'creator' | 'auditor') => void;
-  costoSinFactura: string;
-  setCostoSinFactura: (v: string) => void;
+  viaticosExtra: string;
+  setViaticosExtra: (v: string) => void;
   metaGananciaInput: string;
   setMetaGananciaInput: (v: string) => void;
 }
 
 function TaxAnalysisContent({
-  totalCost,
+  costoFacturadoCarrito,
+  costoSinFacturaCarrito,
   totalSales,
   taxMode,
   setTaxMode,
-  costoSinFactura,
-  setCostoSinFactura,
+  viaticosExtra,
+  setViaticosExtra,
   metaGananciaInput,
   setMetaGananciaInput,
 }: TaxPanelProps) {
-  const csf = parseFloat(costoSinFactura) || 0;
+  const viaticos = parseFloat(viaticosExtra) || 0;
   const mg = parseFloat(metaGananciaInput) || 0;
 
-  const costoFacturado = totalCost; // Cart total = invoiced cost
+  // Products marked "con factura" = costo facturado
+  const costoFacturado = costoFacturadoCarrito;
+  // Products marked "sin factura" + viáticos extras = costo sin factura
+  const csf = costoSinFacturaCarrito + viaticos;
 
   const creatorResults = taxMode === 'creator' && mg > 0
     ? calcCreator(costoFacturado, csf, mg)
@@ -141,8 +147,8 @@ function TaxAnalysisContent({
         <button
           onClick={() => setTaxMode('auditor')}
           className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${taxMode === 'auditor'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            ? 'bg-blue-600 text-white shadow-md'
+            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
             }`}
         >
           <Eye className="w-4 h-4" />
@@ -151,8 +157,8 @@ function TaxAnalysisContent({
         <button
           onClick={() => setTaxMode('creator')}
           className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${taxMode === 'creator'
-              ? 'bg-violet-600 text-white shadow-md'
-              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            ? 'bg-violet-600 text-white shadow-md'
+            : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
             }`}
         >
           <TrendingUp className="w-4 h-4" />
@@ -165,28 +171,39 @@ function TaxAnalysisContent({
         {/* Costo Facturado (auto) */}
         <div>
           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-            <DollarSign className="w-3 h-3 inline" /> Costo Facturado (del carrito)
+            <DollarSign className="w-3 h-3 inline" /> Con Factura (del carrito)
           </label>
-          <div className="px-3 py-2 bg-slate-50 border-2 border-slate-200 rounded-lg text-sm font-black text-slate-700">
+          <div className="px-3 py-2 bg-emerald-50 border-2 border-emerald-200 rounded-lg text-sm font-black text-emerald-700">
             {fmt(costoFacturado)} Bs
           </div>
-          <p className="text-[10px] text-slate-400 mt-0.5">Suma automática de los productos</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">Productos marcados con factura ✓</p>
         </div>
 
-        {/* Costo sin Factura */}
+        {/* Costo sin Factura del carrito (auto) */}
         <div>
           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-            <AlertTriangle className="w-3 h-3 inline text-amber-500" /> Costos Sin Factura
+            <AlertTriangle className="w-3 h-3 inline text-amber-500" /> Sin Factura (del carrito)
+          </label>
+          <div className="px-3 py-2 bg-amber-50 border-2 border-amber-200 rounded-lg text-sm font-black text-amber-700">
+            {fmt(costoSinFacturaCarrito)} Bs
+          </div>
+          <p className="text-[10px] text-slate-400 mt-0.5">Productos marcados sin factura ✗</p>
+        </div>
+
+        {/* Viáticos extras (manual) */}
+        <div className="sm:col-span-2">
+          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+            <AlertTriangle className="w-3 h-3 inline text-amber-500" /> Viáticos / Costos Extra Sin Factura
           </label>
           <div className="relative">
             <input
               type="number"
               min="0"
               step="0.01"
-              value={costoSinFactura}
-              onChange={(e) => setCostoSinFactura(e.target.value)}
+              value={viaticosExtra}
+              onChange={(e) => setViaticosExtra(e.target.value)}
               className="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm font-bold text-slate-800 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10 outline-none transition-all"
-              placeholder="Viáticos, servicios..."
+              placeholder="Viáticos, servicios extras..."
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">Bs</span>
           </div>
@@ -458,7 +475,8 @@ export default function Home() {
       ...product,
       quantity: 1,
       price,
-      individualMargin: globalMargin
+      individualMargin: globalMargin,
+      conFactura: true
     }]);
   };
 
@@ -475,7 +493,8 @@ export default function Home() {
       image_url: '',
       quantity: 1,
       price: manualProduct.price,
-      individualMargin: globalMargin
+      individualMargin: globalMargin,
+      conFactura: true
     }]);
 
     setManualProduct({ name: '', price: 0 });
@@ -503,6 +522,12 @@ export default function Home() {
   const updateName = (index: number, newName: string) => {
     const newCart = [...cart];
     newCart[index].name = newName;
+    setCart(newCart);
+  };
+
+  const updateConFactura = (index: number, value: boolean) => {
+    const newCart = [...cart];
+    newCart[index].conFactura = value;
     setCart(newCart);
   };
 
@@ -551,6 +576,8 @@ export default function Home() {
   };
 
   const totalCost = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const totalCostoFacturado = cart.reduce((acc, item) => acc + (item.conFactura ? item.price * item.quantity : 0), 0);
+  const totalCostoSinFacturaCarrito = cart.reduce((acc, item) => acc + (!item.conFactura ? item.price * item.quantity : 0), 0);
   const totalSales = cart.reduce((acc, item) => {
     const salePrice = item.price * (1 + item.individualMargin / 100);
     return acc + (salePrice * item.quantity);
@@ -895,17 +922,29 @@ export default function Home() {
                     </div>
 
                     <div className="grid grid-cols-12 gap-3 items-center bg-slate-50 p-2 rounded-lg">
-                      <div className="col-span-4">
+                      <div className="col-span-3">
                         <label className="text-[10px] font-bold text-slate-400 uppercase">Cantidad</label>
                         <input type="number" min="1" value={item.quantity} onChange={(e) => updateQuantity(idx, parseInt(e.target.value) || 1)} className="w-full px-2 py-1 text-sm border border-slate-300 rounded text-center font-bold text-slate-800" />
                       </div>
-                      <div className="col-span-4">
+                      <div className="col-span-3">
                         <label className="text-[10px] font-bold text-slate-400 uppercase">Margen %</label>
                         <input type="number" value={item.individualMargin} onChange={(e) => updateIndividualMargin(idx, parseFloat(e.target.value) || 0)} className="w-full px-2 py-1 text-sm border border-slate-300 rounded text-center font-bold text-blue-600" />
                       </div>
-                      <div className="col-span-4 text-right">
+                      <div className="col-span-3 text-center">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase">Factura</label>
+                        <button
+                          onClick={() => updateConFactura(idx, !item.conFactura)}
+                          className={`w-full px-2 py-1 text-xs font-bold rounded transition-all ${item.conFactura
+                              ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                              : 'bg-amber-100 text-amber-700 border border-amber-300'
+                            }`}
+                        >
+                          {item.conFactura ? '✓ Sí' : '✗ No'}
+                        </button>
+                      </div>
+                      <div className="col-span-3 text-right">
                         <label className="text-[10px] font-bold text-slate-400 uppercase">Subtotal</label>
-                        <div className="text-sm font-black text-slate-800">{(salePrice * item.quantity).toFixed(2)} Rs</div>
+                        <div className="text-sm font-black text-slate-800">{(salePrice * item.quantity).toFixed(2)} Bs</div>
                       </div>
                     </div>
                   </div>
@@ -961,12 +1000,13 @@ export default function Home() {
 
               {showTaxPanel && (
                 <TaxAnalysisContent
-                  totalCost={totalCost}
+                  costoFacturadoCarrito={totalCostoFacturado}
+                  costoSinFacturaCarrito={totalCostoSinFacturaCarrito}
                   totalSales={totalSales}
                   taxMode={taxMode}
                   setTaxMode={setTaxMode}
-                  costoSinFactura={costoSinFactura}
-                  setCostoSinFactura={setCostoSinFactura}
+                  viaticosExtra={costoSinFactura}
+                  setViaticosExtra={setCostoSinFactura}
                   metaGananciaInput={metaGananciaInput}
                   setMetaGananciaInput={setMetaGananciaInput}
                 />
