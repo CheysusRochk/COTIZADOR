@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { Search, Plus, Trash2, FileText, Loader2, ChevronDown, ChevronUp, PlusCircle, Settings, Save, Users, Calculator } from 'lucide-react';
+import { Search, Plus, Trash2, FileText, Loader2, ChevronDown, ChevronUp, PlusCircle, Settings, Save, Users, Calculator, BarChart3, TrendingUp, AlertTriangle, DollarSign, Eye } from 'lucide-react';
+import { calcCreator, calcAuditor } from './calculadora/calcEngine';
 
 // Types
 interface Product {
@@ -89,6 +90,273 @@ function numberToSpanish(amount: number): string {
   return `${literal} ${decStr}/100 BOLIVIANOS`;
 }
 
+function fmt(n: number): string {
+  return n.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+interface TaxPanelProps {
+  totalCost: number;
+  totalSales: number;
+  taxMode: 'creator' | 'auditor';
+  setTaxMode: (m: 'creator' | 'auditor') => void;
+  costoSinFactura: string;
+  setCostoSinFactura: (v: string) => void;
+  metaGananciaInput: string;
+  setMetaGananciaInput: (v: string) => void;
+}
+
+function TaxAnalysisContent({
+  totalCost,
+  totalSales,
+  taxMode,
+  setTaxMode,
+  costoSinFactura,
+  setCostoSinFactura,
+  metaGananciaInput,
+  setMetaGananciaInput,
+}: TaxPanelProps) {
+  const csf = parseFloat(costoSinFactura) || 0;
+  const mg = parseFloat(metaGananciaInput) || 0;
+
+  const costoFacturado = totalCost; // Cart total = invoiced cost
+
+  const creatorResults = taxMode === 'creator' && mg > 0
+    ? calcCreator(costoFacturado, csf, mg)
+    : null;
+
+  const auditorResults = taxMode === 'auditor' && totalSales > 0
+    ? calcAuditor(costoFacturado, csf, totalSales)
+    : null;
+
+  const scenarioColors = [
+    { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-100 text-red-700', accent: 'text-red-600' },
+    { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700', accent: 'text-amber-600' },
+    { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-700', accent: 'text-emerald-600' },
+  ];
+
+  return (
+    <div className="p-5 bg-white space-y-5">
+      {/* Mode Toggle */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setTaxMode('auditor')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${taxMode === 'auditor'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }`}
+        >
+          <Eye className="w-4 h-4" />
+          ¿Cuánto ganaré?
+        </button>
+        <button
+          onClick={() => setTaxMode('creator')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${taxMode === 'creator'
+              ? 'bg-violet-600 text-white shadow-md'
+              : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }`}
+        >
+          <TrendingUp className="w-4 h-4" />
+          ¿A cuánto vender?
+        </button>
+      </div>
+
+      {/* Inputs row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Costo Facturado (auto) */}
+        <div>
+          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+            <DollarSign className="w-3 h-3 inline" /> Costo Facturado (del carrito)
+          </label>
+          <div className="px-3 py-2 bg-slate-50 border-2 border-slate-200 rounded-lg text-sm font-black text-slate-700">
+            {fmt(costoFacturado)} Bs
+          </div>
+          <p className="text-[10px] text-slate-400 mt-0.5">Suma automática de los productos</p>
+        </div>
+
+        {/* Costo sin Factura */}
+        <div>
+          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+            <AlertTriangle className="w-3 h-3 inline text-amber-500" /> Costos Sin Factura
+          </label>
+          <div className="relative">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={costoSinFactura}
+              onChange={(e) => setCostoSinFactura(e.target.value)}
+              className="w-full px-3 py-2 border-2 border-slate-200 rounded-lg text-sm font-bold text-slate-800 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10 outline-none transition-all"
+              placeholder="Viáticos, servicios..."
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">Bs</span>
+          </div>
+        </div>
+
+        {/* Conditional: meta ganancia or info */}
+        {taxMode === 'creator' && (
+          <div className="sm:col-span-2">
+            <label className="block text-[10px] font-bold text-violet-500 uppercase mb-1">
+              <TrendingUp className="w-3 h-3 inline" /> Meta de Ganancia Neta
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={metaGananciaInput}
+                onChange={(e) => setMetaGananciaInput(e.target.value)}
+                className="w-full px-3 py-2 border-2 border-violet-200 rounded-lg text-sm font-bold text-slate-800 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/10 outline-none transition-all"
+                placeholder="¿Cuánto quieres ganar neto?"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">Bs</span>
+            </div>
+          </div>
+        )}
+
+        {taxMode === 'auditor' && totalSales > 0 && (
+          <div className="sm:col-span-2">
+            <div className="flex items-center gap-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+              <BarChart3 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+              <span className="text-slate-600">
+                Analizando precio de venta actual: <strong className="text-blue-700">{fmt(totalSales)} Bs</strong>
+                {csf > 0 && <> + viáticos: <strong className="text-amber-600">{fmt(csf)} Bs</strong></>}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Scenario Results */}
+      {taxMode === 'auditor' && auditorResults && (
+        <div className="space-y-3">
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Ganancia Neta Real por Escenario</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {auditorResults.map((r, i) => {
+              const c = scenarioColors[i];
+              const isPos = r.gananciaReal >= 0;
+              return (
+                <div key={i} className={`${c.bg} border ${c.border} rounded-xl p-4 transition-all hover:shadow-md`}>
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md ${c.badge}`}>
+                      {r.label}
+                    </span>
+                  </div>
+                  <div className={`text-2xl font-black ${isPos ? c.accent : 'text-red-600'} mb-3`}>
+                    {fmt(r.gananciaReal)} <span className="text-xs font-bold opacity-60">Bs</span>
+                  </div>
+                  <div className="space-y-1 text-[11px] text-slate-500">
+                    <div className="flex justify-between">
+                      <span>Precio Venta</span>
+                      <span className="font-mono font-bold text-slate-700">{fmt(totalSales)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>− Costos</span>
+                      <span className="font-mono text-red-500">-{fmt(costoFacturado + csf)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>− IVA (13%)</span>
+                      <span className="font-mono text-red-500">-{fmt(totalSales * 0.13)}</span>
+                    </div>
+                    {i >= 1 && costoFacturado > 0 && (
+                      <div className="flex justify-between">
+                        <span>+ Crédito Fiscal</span>
+                        <span className="font-mono text-emerald-600">+{fmt(costoFacturado * 0.13)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span>− IT (3%)</span>
+                      <span className="font-mono text-red-500">-{fmt(totalSales * 0.03)}</span>
+                    </div>
+                    {i === 2 && csf > 0 && (
+                      <div className="flex justify-between">
+                        <span>− Retención</span>
+                        <span className="font-mono text-red-500">-{fmt((csf / 0.845) * 0.155)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t border-slate-200 pt-1 mt-1">
+                      <span className="font-bold text-slate-600">Dinero Mes</span>
+                      <span className="font-mono font-bold text-slate-700">{fmt(r.dineroMes)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>− IUE (25%)</span>
+                      <span className="font-mono text-red-500">-{fmt(r.iueAnual)}</span>
+                    </div>
+                    <div className={`flex justify-between border-t border-slate-200 pt-1 mt-1 font-bold ${isPos ? c.text : 'text-red-700'}`}>
+                      <span>NETO REAL</span>
+                      <span className="font-mono">{fmt(r.gananciaReal)} Bs</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {taxMode === 'creator' && creatorResults && (
+        <div className="space-y-3">
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Precio de Venta Requerido por Escenario</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {creatorResults.map((r, i) => {
+              const c = scenarioColors[i];
+              return (
+                <div key={i} className={`${c.bg} border ${c.border} rounded-xl p-4 transition-all hover:shadow-md`}>
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-md ${c.badge}`}>
+                      {r.label}
+                    </span>
+                  </div>
+                  <div className={`text-2xl font-black ${c.accent} mb-3`}>
+                    {fmt(r.precioVenta)} <span className="text-xs font-bold opacity-60">Bs</span>
+                  </div>
+                  <div className="space-y-1 text-[11px] text-slate-500">
+                    <div className="flex justify-between">
+                      <span>− IVA (13%)</span>
+                      <span className="font-mono text-red-500">-{fmt(r.precioVenta * 0.13)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>− IT (3%)</span>
+                      <span className="font-mono text-red-500">-{fmt(r.precioVenta * 0.03)}</span>
+                    </div>
+                    {i >= 1 && costoFacturado > 0 && (
+                      <div className="flex justify-between">
+                        <span>+ Crédito Fiscal</span>
+                        <span className="font-mono text-emerald-600">+{fmt(costoFacturado * 0.13)}</span>
+                      </div>
+                    )}
+                    {i === 2 && csf > 0 && (
+                      <div className="flex justify-between">
+                        <span>− Retención</span>
+                        <span className="font-mono text-red-500">-{fmt((csf / 0.845) * 0.155)}</span>
+                      </div>
+                    )}
+                    <div className={`flex justify-between border-t border-slate-200 pt-1 mt-1 font-bold ${c.text}`}>
+                      <span>GANANCIA</span>
+                      <span className="font-mono">{fmt(mg)} Bs</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {((taxMode === 'creator' && !creatorResults) || (taxMode === 'auditor' && !auditorResults)) && (
+        <div className="text-center py-6 text-slate-400">
+          <BarChart3 className="w-8 h-8 mx-auto mb-2 opacity-40" />
+          <p className="text-sm font-medium">
+            {taxMode === 'creator'
+              ? 'Ingresa la ganancia neta deseada para ver los precios de venta.'
+              : 'Agrega productos al carrito para ver el análisis tributario.'}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Product[]>([]);
@@ -120,6 +388,12 @@ export default function Home() {
   const [showManualProduct, setShowManualProduct] = useState(false);
   const [manualProduct, setManualProduct] = useState({ name: '', price: 0 });
   const [savedClients, setSavedClients] = useState<ClientData[]>([]);
+
+  // Tax analysis panel state
+  const [showTaxPanel, setShowTaxPanel] = useState(false);
+  const [taxMode, setTaxMode] = useState<'creator' | 'auditor'>('auditor');
+  const [costoSinFactura, setCostoSinFactura] = useState<string>('');
+  const [metaGananciaInput, setMetaGananciaInput] = useState<string>('');
 
   const [config, setConfig] = useState({
     env_mode: 'local',
@@ -668,6 +942,34 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
+              )}
+            </div>
+
+            {/* Tax Analysis Panel */}
+            <div className="border-2 border-slate-100 rounded-xl mb-6 overflow-hidden">
+              <button
+                onClick={() => setShowTaxPanel(!showTaxPanel)}
+                className="w-full px-5 py-4 flex items-center justify-between bg-gradient-to-r from-blue-50 to-violet-50 hover:from-blue-100 hover:to-violet-100 transition-colors border-b border-slate-100"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="bg-gradient-to-r from-blue-600 to-violet-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">$</span>
+                  <span className="font-bold text-slate-800">Análisis Tributario</span>
+                  <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">IVA · IT · IUE</span>
+                </div>
+                {showTaxPanel ? <ChevronUp className="w-5 h-5 text-slate-500" /> : <ChevronDown className="w-5 h-5 text-slate-500" />}
+              </button>
+
+              {showTaxPanel && (
+                <TaxAnalysisContent
+                  totalCost={totalCost}
+                  totalSales={totalSales}
+                  taxMode={taxMode}
+                  setTaxMode={setTaxMode}
+                  costoSinFactura={costoSinFactura}
+                  setCostoSinFactura={setCostoSinFactura}
+                  metaGananciaInput={metaGananciaInput}
+                  setMetaGananciaInput={setMetaGananciaInput}
+                />
               )}
             </div>
 
