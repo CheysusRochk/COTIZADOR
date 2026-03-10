@@ -935,8 +935,8 @@ export default function Home() {
                         <button
                           onClick={() => updateConFactura(idx, !item.conFactura)}
                           className={`w-full px-2 py-1 text-xs font-bold rounded transition-all ${item.conFactura
-                              ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
-                              : 'bg-amber-100 text-amber-700 border border-amber-300'
+                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                            : 'bg-amber-100 text-amber-700 border border-amber-300'
                             }`}
                         >
                           {item.conFactura ? '✓ Sí' : '✗ No'}
@@ -1018,10 +1018,6 @@ export default function Home() {
               <div className="flex justify-between items-center mb-2 opacity-80">
                 <span>Costo Total</span>
                 <span>{totalCost.toFixed(2)} Bs</span>
-              </div>
-              <div className="flex justify-between items-center mb-4 text-green-400 font-medium">
-                <span>Ganancia Estimada</span>
-                <span>{totalProfit.toFixed(2)} Bs</span>
               </div>
               <div className="flex justify-between items-center text-3xl font-black border-t border-slate-700 pt-4 mb-6">
                 <span>TOTAL VENTA</span>
